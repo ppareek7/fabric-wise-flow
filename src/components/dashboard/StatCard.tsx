@@ -9,6 +9,7 @@ interface StatCardProps {
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   variant?: 'default' | 'primary' | 'accent' | 'warning';
+  delay?: number;
 }
 
 export function StatCard({
@@ -19,35 +20,46 @@ export function StatCard({
   trend,
   trendValue,
   variant = 'default',
+  delay = 0,
 }: StatCardProps) {
   const variantStyles = {
-    default: 'border-border',
-    primary: 'border-primary/20 bg-primary/5',
-    accent: 'border-accent/20 bg-accent/5',
-    warning: 'border-warning/20 bg-warning/5',
+    default: 'border-border/50 bg-card',
+    primary: 'border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10',
+    accent: 'border-accent/20 bg-gradient-to-br from-accent/5 to-accent/10',
+    warning: 'border-warning/20 bg-gradient-to-br from-warning/5 to-warning/10',
   };
 
   const iconStyles = {
-    default: 'bg-muted text-muted-foreground',
-    primary: 'bg-primary/10 text-primary',
-    accent: 'bg-accent/10 text-accent',
-    warning: 'bg-warning/10 text-warning',
+    default: 'icon-container bg-muted text-muted-foreground',
+    primary: 'icon-container icon-container-primary',
+    accent: 'icon-container icon-container-accent',
+    warning: 'icon-container bg-warning/10 text-warning',
+  };
+
+  const glowStyles = {
+    default: '',
+    primary: 'before:bg-primary',
+    accent: 'before:bg-accent',
+    warning: 'before:bg-warning',
   };
 
   return (
-    <div className={`stat-card ${variantStyles[variant]}`}>
-      <div className="flex items-start justify-between">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconStyles[variant]}`}>
+    <div 
+      className={`stat-card ${variantStyles[variant]} ${glowStyles[variant]} opacity-0 animate-fade-in`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="flex items-start justify-between relative z-10">
+        <div className={iconStyles[variant]}>
           {icon}
         </div>
         {trend && (
           <div
-            className={`flex items-center gap-1 text-xs font-medium ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
               trend === 'up'
-                ? 'text-success'
+                ? 'bg-success/10 text-success'
                 : trend === 'down'
-                ? 'text-destructive'
-                : 'text-muted-foreground'
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-muted text-muted-foreground'
             }`}
           >
             {trend === 'up' && <TrendingUp className="h-3 w-3" />}
@@ -57,11 +69,11 @@ export function StatCard({
           </div>
         )}
       </div>
-      <div className="mt-4">
+      <div className="mt-5 relative z-10">
         <p className="stat-label">{title}</p>
         <p className="stat-value mt-1">
           {typeof value === 'number' ? value.toLocaleString() : value}
-          {unit && <span className="text-base font-normal text-muted-foreground ml-1">{unit}</span>}
+          {unit && <span className="text-lg font-normal text-muted-foreground ml-1">{unit}</span>}
         </p>
       </div>
     </div>

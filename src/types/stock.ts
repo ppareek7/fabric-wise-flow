@@ -20,6 +20,15 @@ export interface UnfinishedGoods {
   balance: number;
 }
 
+// Poka (Roll/Bundle) based stock item
+export interface PokaItem {
+  id: string;
+  pokaNo: string;
+  shadeNo: string;
+  meter: number;
+  kg: number;
+}
+
 export interface FinishedGoodsBiratnagar {
   id: string;
   date: string;
@@ -33,6 +42,8 @@ export interface FinishedGoodsBiratnagar {
   transferKg: number;
   balanceMeter: number;
   balanceKg: number;
+  // Poka-wise inventory
+  pokaItems: PokaItem[];
 }
 
 export interface BirgunGodownStock {
@@ -48,6 +59,8 @@ export interface BirgunGodownStock {
   salesKg: number;
   balanceMeter: number;
   balanceKg: number;
+  // Poka-wise inventory
+  pokaItems: PokaItem[];
 }
 
 export interface DashboardStats {

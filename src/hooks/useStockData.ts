@@ -5,8 +5,29 @@ import {
   FinishedGoodsBiratnagar,
   BirgunGodownStock,
   DashboardStats,
+  PokaItem,
 } from '@/types/stock';
 import { format, subDays } from 'date-fns';
+
+// Generate mock poka items
+const generatePokaItems = (count: number, prefix: string): PokaItem[] => {
+  const shades = ['SH-01', 'SH-02', 'SH-03', 'SH-04', 'SH-05', 'SH-06', 'SH-07', 'SH-08'];
+  const items: PokaItem[] = [];
+  
+  for (let i = 1; i <= count; i++) {
+    const meter = Math.floor(Math.random() * 300) + 100;
+    const kg = Math.round(meter / 4.5);
+    items.push({
+      id: `${prefix}-poka-${i}`,
+      pokaNo: `P-${prefix.toUpperCase()}-${String(i).padStart(3, '0')}`,
+      shadeNo: shades[Math.floor(Math.random() * shades.length)],
+      meter,
+      kg,
+    });
+  }
+  
+  return items;
+};
 
 // Mock data generators
 const generateMockYarnStock = (): YarnStock[] => {
@@ -67,37 +88,38 @@ const generateMockUnfinishedGoods = (): UnfinishedGoods[] => {
 
 const generateMockBiratnagarStock = (): FinishedGoodsBiratnagar[] => {
   const data: FinishedGoodsBiratnagar[] = [];
-  let balanceMeter = 15000;
-  let balanceKg = 3300;
+  let pokaCounter = 1;
 
   for (let i = 6; i >= 0; i--) {
     const date = format(subDays(new Date(), i), 'yyyy-MM-dd');
-    const openingMeter = balanceMeter;
-    const openingKg = balanceKg;
-    const productionKg = Math.floor(Math.random() * 250) + 150;
-    const productionMeter = productionKg * 4.5;
+    const pokaCount = Math.floor(Math.random() * 8) + 5;
+    const pokaItems = generatePokaItems(pokaCount, `BT-${6-i}`);
+    
+    const totalMeter = pokaItems.reduce((sum, p) => sum + p.meter, 0);
+    const totalKg = pokaItems.reduce((sum, p) => sum + p.kg, 0);
+    
     const salesKg = Math.floor(Math.random() * 100) + 50;
-    const salesMeter = salesKg * 4.5;
+    const salesMeter = Math.round(salesKg * 4.5);
     const transferKg = Math.floor(Math.random() * 80) + 30;
-    const transferMeter = transferKg * 4.5;
-
-    balanceMeter = openingMeter + productionMeter - salesMeter - transferMeter;
-    balanceKg = openingKg + productionKg - salesKg - transferKg;
+    const transferMeter = Math.round(transferKg * 4.5);
 
     data.push({
       id: `biratnagar-${i}`,
       date,
-      openingBalanceMeter: Math.round(openingMeter),
-      openingBalanceKg: Math.round(openingKg),
-      productionMeter: Math.round(productionMeter),
-      productionKg,
-      salesMeter: Math.round(salesMeter),
+      openingBalanceMeter: 0,
+      openingBalanceKg: 0,
+      productionMeter: totalMeter,
+      productionKg: totalKg,
+      salesMeter,
       salesKg,
-      transferMeter: Math.round(transferMeter),
+      transferMeter,
       transferKg,
-      balanceMeter: Math.round(balanceMeter),
-      balanceKg: Math.round(balanceKg),
+      balanceMeter: totalMeter - salesMeter - transferMeter,
+      balanceKg: totalKg - salesKg - transferKg,
+      pokaItems,
     });
+    
+    pokaCounter += pokaCount;
   }
 
   return data.reverse();
@@ -116,7 +138,11 @@ const generateMockBirgunStock = (biratnagarData: FinishedGoodsBiratnagar[]): Bir
     const totalMeter = openingMeter + receivedMeter;
     const totalKg = openingKg + receivedKg;
     const salesKg = Math.floor(Math.random() * 60) + 20;
-    const salesMeter = salesKg * 4.5;
+    const salesMeter = Math.round(salesKg * 4.5);
+    
+    // Generate poka items for Birgunj
+    const pokaCount = Math.floor(Math.random() * 6) + 3;
+    const pokaItems = generatePokaItems(pokaCount, `BG-${i}`);
 
     balanceMeter = totalMeter - salesMeter;
     balanceKg = totalKg - salesKg;
@@ -130,10 +156,11 @@ const generateMockBirgunStock = (biratnagarData: FinishedGoodsBiratnagar[]): Bir
       receivedKg: Math.round(receivedKg),
       totalAvailableMeter: Math.round(totalMeter),
       totalAvailableKg: Math.round(totalKg),
-      salesMeter: Math.round(salesMeter),
+      salesMeter,
       salesKg,
       balanceMeter: Math.round(balanceMeter),
       balanceKg: Math.round(balanceKg),
+      pokaItems,
     });
   });
 
@@ -149,6 +176,15 @@ export function useStockData() {
     () => generateMockBirgunStock(biratnagarStock),
     [biratnagarStock]
   );
+
+  // Get all poka items across both godowns
+  const allBiratnagarPokas = useMemo(() => {
+    return biratnagarStock.flatMap(s => s.pokaItems);
+  }, [biratnagarStock]);
+
+  const allBirgunPokas = useMemo(() => {
+    return birgunStock.flatMap(s => s.pokaItems);
+  }, [birgunStock]);
 
   const dashboardStats = useMemo<DashboardStats>(() => {
     const latestYarn = yarnStock[yarnStock.length - 1];
@@ -175,6 +211,8 @@ export function useStockData() {
     unfinishedGoods,
     biratnagarStock,
     birgunStock,
+    allBiratnagarPokas,
+    allBirgunPokas,
     dashboardStats,
   };
 }

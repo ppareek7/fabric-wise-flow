@@ -7,17 +7,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useStockData } from '@/hooks/useStockData';
 import { PokaItem } from '@/types/stock';
-import { Plus, Download, Factory, Package, TrendingUp } from 'lucide-react';
+import { Plus, Download, Factory, Package, TrendingUp, ShoppingCart, Truck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function BiratnagarStock() {
   const { biratnagarStock, allBiratnagarPokas } = useStockData();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [productionDialogOpen, setProductionDialogOpen] = useState(false);
+  const [salesDialogOpen, setSalesDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [pendingPokas, setPendingPokas] = useState<PokaItem[]>([]);
+  const [selectedPokasForSale, setSelectedPokasForSale] = useState<string[]>([]);
+  const [selectedPokasForTransfer, setSelectedPokasForTransfer] = useState<string[]>([]);
   const { toast } = useToast();
 
   const latestEntry = biratnagarStock[biratnagarStock.length - 1];
@@ -37,7 +43,7 @@ export default function BiratnagarStock() {
     setPendingPokas(pendingPokas.filter(p => p.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleProductionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pendingPokas.length === 0) {
       toast({
@@ -48,11 +54,91 @@ export default function BiratnagarStock() {
       return;
     }
     toast({
-      title: 'Entry saved',
+      title: 'Production Entry Saved',
       description: `${pendingPokas.length} poka(s) added to Biratnagar stock.`,
     });
     setPendingPokas([]);
-    setDialogOpen(false);
+    setProductionDialogOpen(false);
+  };
+
+  const handleSalesSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedPokasForSale.length === 0) {
+      toast({
+        title: 'No pokas selected',
+        description: 'Please select at least one poka for sale.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const selectedPokaDetails = allBiratnagarPokas.filter(p => selectedPokasForSale.includes(p.id));
+    const totalSoldMeter = selectedPokaDetails.reduce((sum, p) => sum + p.meter, 0);
+    const totalSoldKg = selectedPokaDetails.reduce((sum, p) => sum + p.kg, 0);
+    
+    toast({
+      title: 'Sale Recorded',
+      description: `${selectedPokasForSale.length} poka(s) sold - ${totalSoldMeter} mtr / ${totalSoldKg} kg`,
+    });
+    setSelectedPokasForSale([]);
+    setSalesDialogOpen(false);
+  };
+
+  const handleTransferSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedPokasForTransfer.length === 0) {
+      toast({
+        title: 'No pokas selected',
+        description: 'Please select at least one poka for transfer.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    const selectedPokaDetails = allBiratnagarPokas.filter(p => selectedPokasForTransfer.includes(p.id));
+    const totalTransferMeter = selectedPokaDetails.reduce((sum, p) => sum + p.meter, 0);
+    const totalTransferKg = selectedPokaDetails.reduce((sum, p) => sum + p.kg, 0);
+    
+    toast({
+      title: 'Transfer Recorded',
+      description: `${selectedPokasForTransfer.length} poka(s) transferred to Birgunj - ${totalTransferMeter} mtr / ${totalTransferKg} kg`,
+    });
+    setSelectedPokasForTransfer([]);
+    setTransferDialogOpen(false);
+  };
+
+  const togglePokaForSale = (pokaId: string) => {
+    setSelectedPokasForSale(prev => 
+      prev.includes(pokaId) 
+        ? prev.filter(id => id !== pokaId)
+        : [...prev, pokaId]
+    );
+  };
+
+  const togglePokaForTransfer = (pokaId: string) => {
+    setSelectedPokasForTransfer(prev => 
+      prev.includes(pokaId) 
+        ? prev.filter(id => id !== pokaId)
+        : [...prev, pokaId]
+    );
+  };
+
+  const getSelectedSaleSummary = () => {
+    const selected = allBiratnagarPokas.filter(p => selectedPokasForSale.includes(p.id));
+    return {
+      count: selected.length,
+      meter: selected.reduce((sum, p) => sum + p.meter, 0),
+      kg: selected.reduce((sum, p) => sum + p.kg, 0),
+    };
+  };
+
+  const getSelectedTransferSummary = () => {
+    const selected = allBiratnagarPokas.filter(p => selectedPokasForTransfer.includes(p.id));
+    return {
+      count: selected.length,
+      meter: selected.reduce((sum, p) => sum + p.meter, 0),
+      kg: selected.reduce((sum, p) => sum + p.kg, 0),
+    };
   };
 
   return (
@@ -75,9 +161,17 @@ export default function BiratnagarStock() {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Button variant="outline" size="sm" onClick={() => setSalesDialogOpen(true)}>
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Record Sale
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setTransferDialogOpen(true)}>
+              <Truck className="h-4 w-4 mr-2" />
+              Transfer to Birgunj
+            </Button>
+            <Button size="sm" onClick={() => setProductionDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Poka
+              Add Production
             </Button>
           </div>
         </div>
@@ -128,7 +222,7 @@ export default function BiratnagarStock() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6">
           <p className="text-sm text-foreground">
             <strong>Note:</strong> Stock is tracked by Poka No, Shade No, and quantity (meter/kg). 
-            Transfers to Birgunj will move specific pokas to the Birgunj godown.
+            Use <strong>Record Sale</strong> to sell pokas directly from Biratnagar, or <strong>Transfer to Birgunj</strong> to move stock to Birgunj godown.
           </p>
         </div>
 
@@ -168,13 +262,14 @@ export default function BiratnagarStock() {
           </TabsContent>
         </Tabs>
 
+        {/* Add Production Dialog */}
         <StockEntryDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
+          open={productionDialogOpen}
+          onOpenChange={setProductionDialogOpen}
           title="Add Production Pokas"
           description="Enter poka details with shade and quantity information."
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleProductionSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Date</Label>
@@ -204,11 +299,183 @@ export default function BiratnagarStock() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setProductionDialogOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={pendingPokas.length === 0}>
                 Save Entry ({pendingPokas.length} Pokas)
+              </Button>
+            </div>
+          </form>
+        </StockEntryDialog>
+
+        {/* Record Sale Dialog */}
+        <StockEntryDialog
+          open={salesDialogOpen}
+          onOpenChange={setSalesDialogOpen}
+          title="Record Sale from Biratnagar"
+          description="Select poka(s) to sell directly from Biratnagar godown."
+        >
+          <form onSubmit={handleSalesSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sale-date">Date</Label>
+                <Input
+                  id="sale-date"
+                  type="date"
+                  defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Available Stock</Label>
+                <Input
+                  value={`${totalKg.toLocaleString()} kg / ${totalMeter.toLocaleString()} mtr`}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Select Pokas for Sale</Label>
+              <div className="border border-border rounded-lg max-h-60 overflow-y-auto">
+                {allBiratnagarPokas.length === 0 ? (
+                  <p className="p-4 text-sm text-muted-foreground text-center">No pokas available</p>
+                ) : (
+                  allBiratnagarPokas.map((poka) => (
+                    <div 
+                      key={poka.id} 
+                      className="flex items-center gap-3 p-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => togglePokaForSale(poka.id)}
+                    >
+                      <Checkbox 
+                        checked={selectedPokasForSale.includes(poka.id)}
+                        onCheckedChange={() => togglePokaForSale(poka.id)}
+                      />
+                      <div className="flex-1 grid grid-cols-4 gap-2 text-sm">
+                        <span className="font-mono font-medium text-primary">{poka.pokaNo}</span>
+                        <span>{poka.shadeNo}</span>
+                        <span>{poka.meter} mtr</span>
+                        <span>{poka.kg} kg</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {selectedPokasForSale.length > 0 && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                <Label className="text-xs text-muted-foreground">Sale Summary</Label>
+                <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Pokas:</span>
+                    <div className="font-bold text-destructive">{getSelectedSaleSummary().count}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Meter:</span>
+                    <div className="font-bold">{getSelectedSaleSummary().meter.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Kg:</span>
+                    <div className="font-bold">{getSelectedSaleSummary().kg.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => { setSalesDialogOpen(false); setSelectedPokasForSale([]); }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={selectedPokasForSale.length === 0} variant="destructive">
+                Record Sale ({selectedPokasForSale.length} Pokas)
+              </Button>
+            </div>
+          </form>
+        </StockEntryDialog>
+
+        {/* Transfer to Birgunj Dialog */}
+        <StockEntryDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          title="Transfer to Birgunj Godown"
+          description="Select poka(s) to transfer. These will be added to Birgunj stock automatically."
+        >
+          <form onSubmit={handleTransferSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="transfer-date">Date</Label>
+                <Input
+                  id="transfer-date"
+                  type="date"
+                  defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Available Stock</Label>
+                <Input
+                  value={`${totalKg.toLocaleString()} kg / ${totalMeter.toLocaleString()} mtr`}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Select Pokas for Transfer</Label>
+              <div className="border border-border rounded-lg max-h-60 overflow-y-auto">
+                {allBiratnagarPokas.length === 0 ? (
+                  <p className="p-4 text-sm text-muted-foreground text-center">No pokas available</p>
+                ) : (
+                  allBiratnagarPokas.map((poka) => (
+                    <div 
+                      key={poka.id} 
+                      className="flex items-center gap-3 p-3 border-b border-border last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                      onClick={() => togglePokaForTransfer(poka.id)}
+                    >
+                      <Checkbox 
+                        checked={selectedPokasForTransfer.includes(poka.id)}
+                        onCheckedChange={() => togglePokaForTransfer(poka.id)}
+                      />
+                      <div className="flex-1 grid grid-cols-4 gap-2 text-sm">
+                        <span className="font-mono font-medium text-primary">{poka.pokaNo}</span>
+                        <span>{poka.shadeNo}</span>
+                        <span>{poka.meter} mtr</span>
+                        <span>{poka.kg} kg</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {selectedPokasForTransfer.length > 0 && (
+              <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                <Label className="text-xs text-muted-foreground">Transfer Summary</Label>
+                <div className="mt-2 grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Pokas:</span>
+                    <div className="font-bold text-accent">{getSelectedTransferSummary().count}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Meter:</span>
+                    <div className="font-bold">{getSelectedTransferSummary().meter.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Kg:</span>
+                    <div className="font-bold">{getSelectedTransferSummary().kg.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => { setTransferDialogOpen(false); setSelectedPokasForTransfer([]); }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={selectedPokasForTransfer.length === 0}>
+                Transfer ({selectedPokasForTransfer.length} Pokas)
               </Button>
             </div>
           </form>
